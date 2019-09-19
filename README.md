@@ -16,4 +16,11 @@ You can find the rendered viewgrid dataset ModelNet-40 in .mat format here (http
     mkdir datasets
     unzip ModelNet_mat
     
- 
+ ## Run
+ ### For inter-class instance recongition experiment
+ #### Training
+
+    cd inter-class instance
+    CUDA_VISIBLE_DEVICES=0 python train_maml_system.py
+#### Testing
+    CUDA_VISIBLE_DEVICES=0 python train_maml_system.py --evalute_on_test_set_only True
