@@ -10,4 +10,9 @@
     scipy == 1.2.1
   
 ## Dataset
-https://drive.google.com/file/d/1xoYwJpiDlJcro-4vkZ_l3ZSfbidsIy7k/view?usp=sharing
+You can find the rendered viewgrid dataset ModelNet-40 in .mat format here (https://drive.google.com/file/d/1xoYwJpiDlJcro-4vkZ_l3ZSfbidsIy7k/view?usp=sharing). Download it to the 
+    cd inter-class instance
+    mkdir datasets
+    unzip ModelNet_mat
+    
+ 
