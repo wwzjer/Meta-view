@@ -145,7 +145,7 @@ class MAMLFewShotClassifier(nn.Module):
             losses['ent_loss'] = torch.mean(torch.stack(total_ent_losses))
         return losses
 
-    def forward(self, data_batch, epoch, use_second_order, use_multi_step_loss_optimization, num_steps, training_phase, current_iter=None):
+    def forward(self, data_batch, epoch, use_second_order, use_multi_step_loss_optimization, num_steps, training_phase, current_iter=None, sample_idx=None):
         """
         Runs a forward outer loop pass on the batch of tasks using the MAML/++ framework.
         :param data_batch: A data batch containing the support and target sets.
@@ -219,7 +219,8 @@ class MAMLFewShotClassifier(nn.Module):
                                                                                       backup_running_statistics=
                                                                                       True if (num_step == 0) else False,
                                                                                       training=True, num_step=num_step,eval_opts=None,
-                                                                                      current_iter=current_iter)
+                                                                                      current_iter=current_iter,
+                                                                                      sample_idx=sample_idx,task_id=task_id)
                 # print(support_visited_idxes)
                 names_weights_copy = self.apply_inner_loop_update(loss=support_loss,
                                                                   names_weights_copy=names_weights_copy,
@@ -234,7 +235,8 @@ class MAMLFewShotClassifier(nn.Module):
                                                                                        weights=names_weights_copy,
                                                                                        backup_running_statistics=False, training=True,
                                                                                        num_step=num_step,eval_opts=None,
-                                                                                       current_iter=current_iter)
+                                                                                       current_iter=current_iter,
+                                                                                       sample_idx=sample_idx,task_id=task_id)
 
                     task_losses.append(per_step_loss_importance_vectors[num_step] * target_loss)
                 else:
@@ -245,7 +247,8 @@ class MAMLFewShotClassifier(nn.Module):
                                                                                            weights=names_weights_copy,
                                                                                            backup_running_statistics=False, training=True,
                                                                                            num_step=num_step,eval_opts=None,
-                                                                                           current_iter=current_iter)
+                                                                                           current_iter=current_iter,
+                                                                                           sample_idx=sample_idx,task_id=task_id)
                         # print(target_visited_idxes)
                         task_losses.append(target_loss)
                         task_clsf_losses.append(target_clsf_loss)
@@ -284,7 +287,7 @@ class MAMLFewShotClassifier(nn.Module):
 
         return losses, per_task_target_preds
 
-    def net_forward(self, x, weights, backup_running_statistics, training, num_step,eval_opts,current_iter=None):
+    def net_forward(self, x, weights, backup_running_statistics, training, num_step,eval_opts,current_iter=None,sample_idx=None,task_id=None):
         """
         A base model forward pass on some data points x. Using the parameters in the weights dictionary. Also requires
         boolean flags indicating whether to reset the running statistics at the end of the run (if at evaluation phase).
@@ -303,7 +306,8 @@ class MAMLFewShotClassifier(nn.Module):
                                         training=training,
                                         backup_running_statistics=backup_running_statistics, 
                                         num_step=num_step,eval_opts=eval_opts,
-                                        current_iter=current_iter)
+                                        current_iter=current_iter,
+                                        sample_idx=sample_idx,task_id=task_id)
         # loss = F.cross_entropy(input=preds, target=lab)
 
         return loss, clsf_loss, pg_loss, ent_loss, preds, visited_idxes
@@ -332,7 +336,7 @@ class MAMLFewShotClassifier(nn.Module):
                                                      current_iter=current_iter)
         return losses, per_task_target_preds
 
-    def evaluation_forward_prop(self, data_batch, epoch):
+    def evaluation_forward_prop(self, data_batch, epoch, sample_idx=None):
         """
         Runs an outer loop evaluation forward prop using the meta-model and base-model.
         :param data_batch: A data batch containing the support set and the target set input, output pairs.
@@ -342,7 +346,7 @@ class MAMLFewShotClassifier(nn.Module):
         losses, per_task_target_preds = self.forward(data_batch=data_batch, epoch=epoch, use_second_order=False,
                                                      use_multi_step_loss_optimization=True,
                                                      num_steps=self.args.number_of_evaluation_steps_per_iter,
-                                                     training_phase=False)
+                                                     training_phase=False,sample_idx=sample_idx)
 
         return losses, per_task_target_preds
 
@@ -392,7 +396,7 @@ class MAMLFewShotClassifier(nn.Module):
 
         return losses, per_task_target_preds
 
-    def run_validation_iter(self, data_batch):
+    def run_validation_iter(self, data_batch, sample_idx=None):
         """
         Runs an outer loop evaluation step on the meta-model's parameters.
         :param data_batch: input data batch containing the support set and target set input, output pairs
@@ -412,7 +416,7 @@ class MAMLFewShotClassifier(nn.Module):
 
         data_batch = (x_support_set, x_target_set, y_support_set, y_target_set)
 
-        losses, per_task_target_preds = self.evaluation_forward_prop(data_batch=data_batch, epoch=self.current_epoch)
+        losses, per_task_target_preds = self.evaluation_forward_prop(data_batch=data_batch, epoch=self.current_epoch,sample_idx=sample_idx)
 
         # losses['loss'].backward() # uncomment if you get the weird memory error
         # self.zero_grad()

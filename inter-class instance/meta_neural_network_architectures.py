@@ -8,6 +8,7 @@ import numpy as np
 from torch.autograd import Variable
 
 from tensorboardX import SummaryWriter
+from visualize import visualize
 
 def extract_top_level_dict(current_dict):
     """
@@ -703,7 +704,7 @@ class VGGReLUNormNetwork(nn.Module):
 
         print("VGGNetwork build", out.shape)
 
-    def forward(self, x, num_step, params=None, training=False, backup_running_statistics=False,eval_opts=None,current_iter=None):
+    def forward(self, x, num_step, params=None, training=False, backup_running_statistics=False,eval_opts=None,current_iter=None,sample_idx=None,task_id=None):
         """
         Forward propages through the network. If any params are passed then they are used instead of stored params.
         :param x: Input image batch.
@@ -723,6 +724,7 @@ class VGGReLUNormNetwork(nn.Module):
         log_prob_act_all = []
         entropy_all = []
         baseline_all = []
+        action_probs_all = []
         hidden = Variable(torch.zeros(batch_size,256))
         R_avg_expert = 0
         avg_count_expert = 0
@@ -757,6 +759,7 @@ class VGGReLUNormNetwork(nn.Module):
             if self.args.use_cuda:
                 im, delta, pro = im.cuda(), delta.cuda(), pro.cuda()
                 im, delta, pro = Variable(im), Variable(delta), Variable(pro)
+            
             visited_idxes.append(x.idx)
             
             if self.args.actOnTime:
@@ -846,10 +849,10 @@ class VGGReLUNormNetwork(nn.Module):
                     entropy = None
                 
                 actions_taken[:,t] = act[:,0]
-                if t == self.args.T-2:
-                    import matplotlib.pyplot as plt
-                    plt.hist(actions_taken.view(-1))
-                    plt.show()
+                # if t == self.args.T-2:
+                #     import matplotlib.pyplot as plt
+                #     plt.hist(actions_taken.view(-1))
+                #     plt.show()
 
                 reward_expert = x.rotate(act[:,0])
                 reward_expert = torch.Tensor(reward_expert)
@@ -862,7 +865,9 @@ class VGGReLUNormNetwork(nn.Module):
                 reward_all.append(reward_expert)
                 log_prob_act_all.append(log_prob_act)
                 entropy_all.append(entropy)
-
+                action_probs_all.append(action_probs)
+        
+        visualize(x, visited_idxes,action_probs_all,self.args,sample_idx=sample_idx,task_id=task_id)
         # Classification loss
         loss = Variable(torch.Tensor([0]))
         R = torch.zeros(batch_size)
